@@ -8,11 +8,34 @@ import dayjs from "dayjs";
 import {S3} from 'aws-sdk';
 
 import { document } from "../utils/dynamodbClient";
-import { ICreateCertificate } from "../contract/ICreateCertificate";
-import { ITemplateCertificate } from "src/contract/ITemplateCertificate";
+import { ICreateCertificate } from "../dto/ICreateCertificate";
+import { ITemplateCertificate } from "src/dto/ITemplateCertificate";
 
 export const handle = async (event) => {
   const { name, id, grade } = JSON.parse(event.body) as ICreateCertificate;
+
+  const response = await document.query({
+    TableName : "users_certificates",
+        KeyConditionExpression : "id = :id",
+        ExpressionAttributeValues : {
+            ":id":id
+        }
+  }).promise()
+
+  const userAlreadyExists = response.Items[0]
+
+  if(!userAlreadyExists){
+    await document
+    .put({
+      TableName: "users_certificates",
+      Item: {
+        id,
+        name,
+        grade,
+      },
+    })
+    .promise();
+  }
 
   const compile = async function (data: ITemplateCertificate) {
     const filePath = path.join(
@@ -26,17 +49,6 @@ export const handle = async (event) => {
 
     return handlebars.compile(html)(data);
   };
-
-  await document
-    .put({
-      TableName: "users_certificates",
-      Item: {
-        id,
-        name,
-        grade,
-      },
-    })
-    .promise();
 
   const medalPath = path.join(process.cwd(), "src", "templates", "selo.png");
   const medal = fs.readFileSync(medalPath, "base64");
@@ -85,7 +97,7 @@ export const handle = async (event) => {
   return {
     statusCode: 201,
     body: JSON.stringify({
-      message: "Certificate Created!",
+      message: `https://rentx-api-inilo.s3.amazonaws.com/${id}.pdf`,
     }),
     headers: {
       contentType: "application/json",
