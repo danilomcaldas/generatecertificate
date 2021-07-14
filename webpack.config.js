@@ -3,6 +3,8 @@ const slsw = require('serverless-webpack');
 const nodeExternals = require('webpack-node-externals');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
+const CopyWebPackPlugin = require("copy-webpack-plugin")
+
 /*
 This line is only required if you are specifying `TS_NODE_PROJECT` for whatever reason.
  */
@@ -53,5 +55,12 @@ module.exports = {
       },
     ],
   },
-  plugins: [],
+  plugins: [
+    new CopyWebPackPlugin({
+      patterns:[{
+        from : "./src/templates",
+        to: path.join(__dirname, ".webpack/service/src/templates")
+      }]
+    })
+  ],
 };
